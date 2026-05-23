@@ -27,6 +27,13 @@ yarn-error.log*
 
 # local env files
 .env*.local
+.env
+
+# uploads & runtime data
+/data/
+
+# claude code session files
+.claude/
 
 # vercel
 .vercel
@@ -34,3 +41,5 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/lib/generated/prisma

@@ -1,0 +1,201 @@
+'use client'
+import { createContext, useContext, ReactNode } from 'react'
+
+const I18N: Record<string, Record<string, string | string[]>> = {
+  en: {
+    'app.name':           'Hive',
+    'app.tagline':        'your AI team, always working',
+    'nav.dashboard':      'The Hive',
+    'nav.meetings':       'Meetings',
+    'nav.tasks':          'Tasks',
+    'nav.activity':       'Activity',
+    'nav.working':        '%n working',
+    'status.idle':        'Idle',
+    'status.thinking':    'Thinking',
+    'status.working':     'Working',
+    'status.in-meeting':  'In meeting',
+    'status.done':        'Done',
+    'hex.task':           'Task',
+    'hex.meet':           'Meet',
+    'hex.remove':         'Remove agent',
+    'side.assign':        'Assign Task',
+    'side.meet':          'Start Meeting',
+    'side.close':         'Close panel',
+    'side.pickAgent':     'Pick an agent to assign',
+    'side.currentTask':   'Currently working on',
+    'side.newTask':       'New task',
+    'side.taskPlaceholder': 'Give a task to %n…',
+    'side.assignBtn':     'Assign Task',
+    'side.streaming':     'streaming',
+    'side.topic':         'Meeting topic',
+    'side.invite':        'Invite agents',
+    'side.selected':      '%n selected',
+    'side.agenda':        'Agenda',
+    'side.agendaHint':    'optional, hive will draft if empty',
+    'side.startBtn':      'Start Meeting Now',
+    'side.meetingEta':    'Estimated duration: 12–18 min · auto-transcribed',
+    'side.quickPrompts':  ['Audit /auth endpoints','Draft refresh-token RFC','Spec PR review checklist','Generate test matrix'],
+    'side.agendaPlaceholder': '• Cohort split walkthrough\n• Hypothesis proposals\n• Decide on shippable intervention',
+    'meet.exit':          'Exit room',
+    'meet.live':          'LIVE',
+    'meet.attending':     '%n attending · transcribing',
+    'meet.placeholder':   'Say something…',
+    'meet.speak':         'Speak',
+    'meet.end':           'End meeting',
+    'meet.summarise':     'Summarise so far',
+    'meet.composing':     'is composing a reply…',
+    'meet.you':           'you',
+    'meet.agenda':        'Agenda',
+    'meet.decisions':     'Decisions',
+    'meet.decisionsHint': 'auto-extracted',
+    'meet.actions':       'Action items',
+    'prof.currentTask':   'Current task',
+    'prof.lastOutput':    'Last output',
+    'prof.tasks':         'Tasks done',
+    'prof.avgResp':       'Avg response',
+    'prof.joined':        'Joined',
+    'prof.daysAgo':       '%n d ago',
+    'prof.success':       'Success rate',
+    'prof.assignBtn':     'Assign Task',
+    'prof.inviteBtn':     'Invite to Meeting',
+    'prof.eta':           'eta ~28 min',
+    'prof.started':       'started 14:38',
+    'prof.complete':      '42% complete',
+    'rail.dashboard':     'Dashboard',
+    'rail.task':          'Task panel',
+    'rail.meeting':       'Meeting room',
+    'rail.sheet':         'Components',
+    'role.pm':            'Product Manager',
+    'role.eng':           'Senior Engineer',
+    'role.design':        'Product Designer',
+    'role.data':          'Data Analyst',
+    'role.writer':        'Content Writer',
+    'role.research':      'UX Researcher',
+    'role.qa':            'QA Engineer',
+    'role.ops':           'Operations',
+    'role.growth':        'Growth Marketer',
+    'role.sales':         'Sales Lead',
+    'role.support':       'Support',
+    'role.finance':       'Finance',
+    'role.security':      'Security',
+  },
+  zh: {
+    'app.name':           'Hive',
+    'app.tagline':        '你的 AI 团队，始终在线',
+    'nav.dashboard':      '蜂巢',
+    'nav.meetings':       '会议',
+    'nav.tasks':          '任务',
+    'nav.activity':       '动态',
+    'nav.working':        '%n 个 agent 工作中',
+    'status.idle':        '闲置',
+    'status.thinking':    '思考中',
+    'status.working':     '工作中',
+    'status.in-meeting':  '会议中',
+    'status.done':        '已完成',
+    'hex.task':           '任务',
+    'hex.meet':           '会议',
+    'hex.remove':         '移除 agent',
+    'side.assign':        '指派任务',
+    'side.meet':          '发起会议',
+    'side.close':         '关闭面板',
+    'side.pickAgent':     '选择一个 agent 来指派',
+    'side.currentTask':   '正在处理',
+    'side.newTask':       '新任务',
+    'side.taskPlaceholder': '给 %n 一个任务…',
+    'side.assignBtn':     '指派任务',
+    'side.streaming':     '输出中',
+    'side.topic':         '会议主题',
+    'side.invite':        '邀请 agent',
+    'side.selected':      '已选 %n',
+    'side.agenda':        '议程',
+    'side.agendaHint':    '可选，留空则由 Hive 自动起草',
+    'side.startBtn':      '立即开会',
+    'side.meetingEta':    '预计 12–18 分钟 · 自动转录',
+    'side.quickPrompts':  ['审计 /auth 接口','起草刷新令牌方案','PR review 清单','生成测试矩阵'],
+    'side.agendaPlaceholder': '• 留存数据拆解\n• 假设提议\n• 决定本周可上线的干预',
+    'meet.exit':          '退出会议',
+    'meet.live':          '直播中',
+    'meet.attending':     '%n 人参加 · 转录中',
+    'meet.placeholder':   '说点什么…',
+    'meet.speak':         '发言',
+    'meet.end':           '结束会议',
+    'meet.summarise':     '总结当前内容',
+    'meet.composing':     '正在编辑回复…',
+    'meet.you':           '你',
+    'meet.agenda':        '议程',
+    'meet.decisions':     '决策',
+    'meet.decisionsHint': '自动提取',
+    'meet.actions':       '行动项',
+    'prof.currentTask':   '当前任务',
+    'prof.lastOutput':    '最近输出',
+    'prof.tasks':         '已完成任务',
+    'prof.avgResp':       '平均响应',
+    'prof.joined':        '加入时间',
+    'prof.daysAgo':       '%n 天前',
+    'prof.success':       '成功率',
+    'prof.assignBtn':     '指派任务',
+    'prof.inviteBtn':     '邀请进会议',
+    'prof.eta':           '预计还需 28 分钟',
+    'prof.started':       '开始 14:38',
+    'prof.complete':      '完成 42%',
+    'rail.dashboard':     '主面板',
+    'rail.task':          '任务面板',
+    'rail.meeting':       '会议室',
+    'rail.sheet':         '组件',
+    'role.pm':            '产品经理',
+    'role.eng':           '资深工程师',
+    'role.design':        '产品设计',
+    'role.data':          '数据分析',
+    'role.writer':        '内容写作',
+    'role.research':      '用户研究',
+    'role.qa':            '测试工程师',
+    'role.ops':           '运营',
+    'role.growth':        '增长营销',
+    'role.sales':         '销售负责人',
+    'role.support':       '客户支持',
+    'role.finance':       '财务',
+    'role.security':      '安全',
+  },
+}
+
+interface LangContextValue {
+  lang: string
+  setLang: (l: string) => void
+  t: (key: string) => string
+  tArr: (key: string) => string[]
+}
+
+export const LangCtx = createContext<LangContextValue>({
+  lang: 'en',
+  setLang: () => {},
+  t: (k) => k,
+  tArr: () => [],
+})
+
+export function useT() {
+  return useContext(LangCtx)
+}
+
+export function makeT(lang: string) {
+  return function t(key: string): string {
+    const v = I18N[lang]?.[key] ?? I18N.en?.[key] ?? key
+    return Array.isArray(v) ? (v as string[]).join(', ') : String(v)
+  }
+}
+
+export function makeTArr(lang: string) {
+  return function tArr(key: string): string[] {
+    const v = I18N[lang]?.[key] ?? I18N.en?.[key] ?? []
+    return Array.isArray(v) ? (v as string[]) : [String(v)]
+  }
+}
+
+export function LangProvider({ children, lang, setLang, t, tArr }: {
+  children: ReactNode
+  lang: string
+  setLang: (l: string) => void
+  t: (key: string) => string
+  tArr: (key: string) => string[]
+}) {
+  return <LangCtx.Provider value={{ lang, setLang, t, tArr }}>{children}</LangCtx.Provider>
+}
