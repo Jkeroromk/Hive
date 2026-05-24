@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Hive — AI 多智能体协作平台
 
-## Getting Started
+> 你的 AI 团队，随时待命。
 
-First, run the development server:
+Hive 是一个为创始人和 CEO 打造的 AI 多智能体工作平台。13 名专属 AI 团队成员各司其职，涵盖产品、工程、设计、数据、市场、销售、财务等职能，可分配任务、召开 AI 会议、协作推进项目。
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 功能亮点
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **13 名专属 AI Agent** — Ming（产品）、Taro（工程）、Luna（设计）、Rio（数据）、Juno（增长）、Orion（财务）等，每人有明确的专业边界和独立视角
+- **工作区上下文** — 填写一次公司/CEO 信息，所有 Agent 回答时都带着你的业务背景
+- **流式任务分配** — 实时 SSE streaming，指派任务后立即看到 AI 输出
+- **AI 多人会议室** — 发起会议话题，多名 Agent 各自发言、互不重复，形成真实讨论
+- **项目管理** — 关联对话、会议记录和文件附件，完整追踪项目进展
+- **文件上传** — 支持 PDF、Word、Excel、图片等格式，Agent 可读取文件内容作为上下文
+- **用量统计** — 实时显示 Token 消耗、请求次数，按 Groq 付费价估算成本
+- **深色 / 浅色主题** — 跟随偏好，持久化保存
+- **中英双语** — 完整 i18n 支持，一键切换
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## 技术栈
 
-To learn more about Next.js, take a look at the following resources:
+| 层级 | 技术 |
+|------|------|
+| 框架 | Next.js 14 App Router |
+| AI | Groq API（llama-3.3-70b-versatile）|
+| 认证 | Clerk v7 |
+| 数据库 | PostgreSQL + Prisma |
+| 状态管理 | Zustand（持久化） |
+| 流式输出 | Server-Sent Events（SSE）|
+| 文件解析 | pdf-parse、mammoth、xlsx |
+| 样式 | CSS 变量 + Tailwind |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 免费额度参考
 
-## Deploy on Vercel
+| 服务 | 免费额度 |
+|------|---------|
+| Groq | ~6,000 请求/天，约 500K tokens/天 |
+| Clerk | 10,000 月活用户 |
+| Neon | 0.5 GB 存储，无限请求 |
+| Vercel | 100GB 带宽/月 |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## License
+
+MIT
