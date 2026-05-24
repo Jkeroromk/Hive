@@ -29,10 +29,40 @@ export interface MeetingRecord {
   endedAt?: number
 }
 
+export interface TokenUsage {
+  promptTokens: number
+  completionTokens: number
+  totalTokens: number
+  requestCount: number
+}
+
+export interface WorkspaceContext {
+  ceoName: string
+  companyName: string
+  industry: string
+  mission: string
+  stage: string
+  teamSize: string
+  topPriorities: string
+  commStyle: string
+}
+
 interface HiveStore {
   taskHistory: TaskRecord[]
   addTaskRecord: (r: TaskRecord) => void
   clearTaskHistory: () => void
+
+  theme: string
+  setTheme: (t: string) => void
+  lang: string
+  setLang: (l: string) => void
+
+  workspace: WorkspaceContext | null
+  setWorkspace: (w: WorkspaceContext) => void
+
+  tokenUsage: TokenUsage
+  addTokenUsage: (prompt: number, completion: number) => void
+  resetTokenUsage: () => void
 
   meetingHistory: MeetingRecord[]
   startMeeting: (id: string, topic: string, participantIds: string[]) => void
@@ -50,6 +80,27 @@ export const useHiveStore = create<HiveStore>()(
       addTaskRecord: (r) =>
         set((s) => ({ taskHistory: [r, ...s.taskHistory].slice(0, 200) })),
       clearTaskHistory: () => set({ taskHistory: [] }),
+
+      theme: 'dark',
+      setTheme: (t) => set({ theme: t }),
+      lang: 'zh',
+      setLang: (l) => set({ lang: l }),
+
+      workspace: null,
+      setWorkspace: (w) => set({ workspace: w }),
+
+      tokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0, requestCount: 0 },
+      addTokenUsage: (prompt, completion) =>
+        set((s) => ({
+          tokenUsage: {
+            promptTokens:    s.tokenUsage.promptTokens    + prompt,
+            completionTokens:s.tokenUsage.completionTokens + completion,
+            totalTokens:     s.tokenUsage.totalTokens     + prompt + completion,
+            requestCount:    s.tokenUsage.requestCount    + 1,
+          },
+        })),
+      resetTokenUsage: () =>
+        set({ tokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0, requestCount: 0 } }),
 
       meetingHistory: [],
       startMeeting: (id, topic, participantIds) =>

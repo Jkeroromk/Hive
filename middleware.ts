@@ -1,11 +1,13 @@
-import { withAuth } from 'next-auth/middleware'
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 
-export default withAuth({
-  pages: {
-    signIn: '/login',
-  },
+const isPublicRoute = createRouteMatcher(['/login(.*)', '/sso-callback(.*)'])
+
+export default clerkMiddleware(async (auth, req) => {
+  if (!isPublicRoute(req)) {
+    await auth.protect()
+  }
 })
 
 export const config = {
-  matcher: ['/((?!api/auth|login|_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 }

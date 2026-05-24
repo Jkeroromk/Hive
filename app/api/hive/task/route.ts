@@ -1,17 +1,16 @@
 import { NextRequest } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import Groq from 'groq-sdk'
+import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db'
 import { AGENTS } from '@/lib/hive-data'
 import { AGENT_PROMPTS } from '@/lib/agent-prompts'
 import { buildFileContext } from '@/lib/file-extract'
 
-const client = new Anthropic()
+const client = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user) return new Response('Unauthorized', { status: 401 })
+  const { userId } = await auth()
+  if (!userId) return new Response('Unauthorized', { status: 401 })
 
   const {
     agentId,
@@ -19,19 +18,35 @@ export async function POST(req: NextRequest) {
     projectId,
     conversationId: existingConvId,
     uploadIds,
+    workspace,
   }: {
     agentId: string
     task: string
     projectId?: string
     conversationId?: string
     uploadIds?: string[]
+    workspace?: {
+      ceoName: string; companyName: string; industry: string
+      mission: string; stage: string; teamSize: string
+      topPriorities: string; commStyle: string
+    }
   } = await req.json()
 
   const agent = AGENTS.find((a) => a.id === agentId)
   if (!agent) return new Response('Agent not found', { status: 404 })
 
-  const systemPrompt =
-    AGENT_PROMPTS[agentId] ?? `You are ${agent.name}, a helpful AI assistant.`
+  const basePrompt = AGENT_PROMPTS[agentId] ?? `You are ${agent.name}, a helpful AI assistant.`
+  const systemPrompt = workspace
+    ? `--- WORKSPACE CONTEXT ---
+CEO: ${workspace.ceoName} | Company: ${workspace.companyName} (${workspace.industry})
+Mission: ${workspace.mission}
+Stage: ${workspace.stage} | Team: ${workspace.teamSize}
+Current priorities: ${workspace.topPriorities}
+CEO communication style: ${workspace.commStyle}
+--- END CONTEXT ---
+
+${basePrompt}`
+    : basePrompt
 
   // Build task content — append file context if any uploads
   let fullTask = task
@@ -102,24 +117,33 @@ export async function POST(req: NextRequest) {
           messages = [{ role: 'user', content: fullTask }]
         }
 
-        const response = await client.messages.create({
-          model: 'claude-sonnet-4-6',
+        const groqMessages: { role: 'system' | 'user' | 'assistant'; content: string }[] = [
+          { role: 'system', content: systemPrompt },
+          ...messages,
+        ]
+
+        const response = await client.chat.completions.create({
+          model: 'llama-3.3-70b-versatile',
           max_tokens: 1024,
-          system: systemPrompt,
-          messages,
+          messages: groqMessages,
           stream: true,
+          stream_options: { include_usage: true },
         })
 
         send('status', { status: 'working', agentId })
 
         let fullContent = ''
         for await (const chunk of response) {
-          if (
-            chunk.type === 'content_block_delta' &&
-            chunk.delta.type === 'text_delta'
-          ) {
-            fullContent += chunk.delta.text
-            send('delta', { text: chunk.delta.text, agentId })
+          const text = chunk.choices[0]?.delta?.content ?? ''
+          if (text) {
+            fullContent += text
+            send('delta', { text, agentId })
+          }
+          if (chunk.usage) {
+            send('usage', {
+              promptTokens: chunk.usage.prompt_tokens,
+              completionTokens: chunk.usage.completion_tokens,
+            })
           }
         }
 

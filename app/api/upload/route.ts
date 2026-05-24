@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db'
 import { saveFile, fileUrl } from '@/lib/storage'
 import { extractText } from '@/lib/file-extract'
@@ -7,8 +7,8 @@ import { extractText } from '@/lib/file-extract'
 const MAX_SIZE = 50 * 1024 * 1024 // 50 MB
 
 export async function POST(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { userId } = await auth()
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const formData = await req.formData()
   const file = formData.get('file') as File | null

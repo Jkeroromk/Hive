@@ -3,142 +3,83 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { Agent, Status } from '@/types'
 import { AGENTS, sv } from '@/lib/hive-data'
 import { useHiveStore } from '@/lib/hive-store'
-import { LangProvider, makeT, makeTArr, useT } from '@/lib/i18n'
+import { LangProvider, makeT, makeTArr } from '@/lib/i18n'
 import TopNav from '@/components/hive/TopNav'
 import Dashboard from '@/components/hive/Dashboard'
 import Sidebar from '@/components/hive/Sidebar'
 import MeetingRoomView from '@/components/hive/MeetingRoomView'
 import ProfileModal from '@/components/hive/ProfileModal'
+import ProjectsPanel from '@/components/hive/ProjectsPanel'
+import SettingsModal from '@/components/hive/SettingsModal'
 import Icon from '@/components/hive/Icon'
 
-function ScreenRail({
-  screen,
-  setScreen,
-  sidebar,
-  setSidebar,
-  sheet,
-  setSheet,
+// ─── Mobile bottom nav ───────────────────────────────────────────────────────
+function MobileNav({
+  current,
+  onNav,
 }: {
-  screen: string
-  setScreen: (s: string) => void
-  sidebar: string | null
-  setSidebar: (s: string | null) => void
-  sheet: boolean
-  setSheet: (v: boolean) => void
+  current: string
+  onNav: (id: string) => void
 }) {
-  const { t } = useT()
   const items = [
-    {
-      id: 'dashboard',
-      label: t('rail.dashboard'),
-      icon: 'hex-fill',
-      active: screen === 'dashboard' && !sidebar && !sheet,
-      onClick: () => {
-        setScreen('dashboard')
-        setSidebar(null)
-        setSheet(false)
-      },
-    },
-    {
-      id: 'task',
-      label: t('rail.task'),
-      icon: 'task',
-      active: screen === 'dashboard' && sidebar === 'assign',
-      onClick: () => {
-        setScreen('dashboard')
-        setSidebar('assign')
-        setSheet(false)
-      },
-    },
-    {
-      id: 'meeting',
-      label: t('rail.meeting'),
-      icon: 'meeting',
-      active: screen === 'meeting',
-      onClick: () => {
-        setScreen('meeting')
-        setSheet(false)
-      },
-    },
-    {
-      id: 'sheet',
-      label: t('rail.sheet'),
-      icon: 'sparks',
-      active: sheet,
-      onClick: () => setSheet(true),
-    },
+    { id: 'dashboard', icon: 'hex-fill',  label: 'Home' },
+    { id: 'tasks',     icon: 'task',      label: 'Tasks' },
+    { id: 'meetings',  icon: 'meeting',   label: 'Meetings' },
+    { id: 'projects',  icon: 'sparks',    label: 'Projects' },
   ]
-
   return (
-    <div
-      style={{
-        position: 'fixed',
-        bottom: 24,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 30,
-        display: 'flex',
-        gap: 2,
-        padding: 5,
-        borderRadius: 99,
-        background: 'var(--surface)',
-        border: '.5px solid var(--line)',
-        backdropFilter: 'blur(20px)',
-        boxShadow: '0 8px 32px rgba(0,0,0,.18)',
-      }}
+    <nav style={{
+      display: 'none',  // shown only on mobile via CSS
+      position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
+      background: 'var(--backdrop)', backdropFilter: 'blur(20px)',
+      borderTop: '.5px solid var(--line)', padding: '6px 0 env(safe-area-inset-bottom)',
+    }}
+      className="mobile-nav"
     >
-      {items.map((item) => (
-        <button
-          key={item.id}
-          onClick={item.onClick}
-          title={item.label}
-          style={{
-            appearance: 'none',
-            border: 0,
-            borderRadius: 99,
-            background: item.active ? 'var(--amber)' : 'transparent',
-            color: item.active ? 'var(--bg)' : 'var(--text-dim)',
-            fontFamily: 'inherit',
-            fontSize: 12,
-            fontWeight: 600,
-            padding: '8px 14px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 7,
-            whiteSpace: 'nowrap',
-            boxShadow: item.active ? '0 0 16px var(--amber-glow)' : 'none',
-            transition: 'all .2s',
-          }}
-        >
-          <Icon name={item.icon} size={13} />
-          <span>{item.label}</span>
-        </button>
-      ))}
-    </div>
+      {items.map(item => {
+        const active = current === item.id
+        return (
+          <button key={item.id} onClick={() => onNav(item.id)} style={{
+            flex: 1, appearance: 'none', border: 0, background: 'transparent',
+            color: active ? 'var(--amber)' : 'var(--text-mute)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+            padding: '8px 4px', cursor: 'pointer', fontFamily: 'inherit',
+          }}>
+            <Icon name={item.icon} size={20} />
+            <span style={{ fontSize: 9.5, fontWeight: 600 }}>{item.label}</span>
+          </button>
+        )
+      })}
+    </nav>
   )
 }
 
 function HiveApp() {
-  const [theme, setThemeState] = useState('dark')
-  const [lang, setLangState] = useState('en')
+  const theme      = useHiveStore((s) => s.theme)
+  const setThemeStore = useHiveStore((s) => s.setTheme)
+  const lang       = useHiveStore((s) => s.lang)
+  const setLangStore  = useHiveStore((s) => s.setLang)
+  const workspace  = useHiveStore((s) => s.workspace)
+  const [setupOpen, setSetupOpen] = useState(false)
 
-  const t = makeT(lang)
+  const t    = makeT(lang)
   const tArr = makeTArr(lang)
 
   const setTheme = (v: string) => {
-    setThemeState(v)
+    setThemeStore(v)
     document.body.setAttribute('data-theme', v)
   }
   const setLang = (v: string) => {
-    setLangState(v)
+    setLangStore(v)
     document.body.classList.remove('lang-en', 'lang-zh')
     document.body.classList.add('lang-' + v)
   }
 
   useEffect(() => {
     document.body.setAttribute('data-theme', theme)
-    document.body.classList.add('lang-en')
+    document.body.classList.remove('lang-en', 'lang-zh')
+    document.body.classList.add('lang-' + lang)
+    if (!workspace) setSetupOpen(true)
   }, [])
 
   const [screen, setScreen] = useState('dashboard')
@@ -221,7 +162,7 @@ function HiveApp() {
     <LangProvider lang={lang} setLang={setLang} t={t} tArr={tArr}>
       <div
         style={{
-          height: '100vh',
+          height: '100dvh',
           width: '100vw',
           display: 'flex',
           flexDirection: 'column',
@@ -231,17 +172,34 @@ function HiveApp() {
         <TopNav
           workingCount={workingCount}
           onNav={(id) => {
-            if (id === 'meetings') setScreen('meeting')
-            else if (id === 'dashboard') setScreen('dashboard')
+            if (id === 'meetings') {
+              setSheet(false)
+              if (meetingParticipantIds.length > 0) {
+                setScreen('meeting')
+              } else {
+                setScreen('dashboard')
+                setSidebar('meet')
+              }
+            } else if (id === 'dashboard') {
+              setScreen('dashboard'); setSidebar(null); setSheet(false)
+            } else if (id === 'tasks') {
+              setScreen('dashboard'); setSidebar('assign'); setSheet(false)
+            } else if (id === 'projects') {
+              setSheet(true)
+            }
           }}
-          current={screen === 'meeting' ? 'meetings' : 'dashboard'}
-          theme={theme}
-          onTheme={setTheme}
-          lang={lang}
-          onLang={setLang}
+          current={
+            sheet ? 'projects'
+            : screen === 'meeting' ? 'meetings'
+            : sidebar === 'meet' ? 'meetings'
+            : sidebar === 'assign' ? 'tasks'
+            : 'dashboard'
+          }
+          onSetup={() => setSetupOpen(true)}
+          hasWorkspace={!!workspace}
         />
 
-        <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
+        <div className="hive-body" style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
           <Dashboard
             agents={visibleAgents}
             onSelectAgent={setProfile}
@@ -261,15 +219,6 @@ function HiveApp() {
             />
           )}
         </div>
-
-        <ScreenRail
-          screen={screen}
-          setScreen={setScreen}
-          sidebar={sidebar}
-          setSidebar={setSidebar}
-          sheet={sheet}
-          setSheet={setSheet}
-        />
 
         {/* Restore removed agents button */}
         {visibleAgents.length < AGENTS.length && screen === 'dashboard' && (
@@ -303,6 +252,21 @@ function HiveApp() {
           </button>
         )}
 
+        {sheet && (
+          <ProjectsPanel onClose={() => setSheet(false)} />
+        )}
+
+        {setupOpen && (
+          <SettingsModal
+            onClose={() => setSetupOpen(false)}
+            theme={theme}
+            onTheme={setTheme}
+            lang={lang}
+            onLang={setLang}
+            initialTab={workspace ? 'workspace' : 'workspace'}
+          />
+        )}
+
         {screen === 'meeting' && meetingParticipantIds.length > 0 && (
           <MeetingRoomView
             key={meetingIdRef.current}
@@ -324,6 +288,33 @@ function HiveApp() {
           onInvite={(a) => {
             setProfile(null)
             handleInvite(a)
+          }}
+        />
+
+        <MobileNav
+          current={
+            sheet ? 'projects'
+            : screen === 'meeting' ? 'meetings'
+            : sidebar === 'meet' ? 'meetings'
+            : sidebar === 'assign' ? 'tasks'
+            : 'dashboard'
+          }
+          onNav={(id) => {
+            if (id === 'meetings') {
+              setSheet(false)
+              if (meetingParticipantIds.length > 0) {
+                setScreen('meeting')
+              } else {
+                setScreen('dashboard')
+                setSidebar('meet')
+              }
+            } else if (id === 'dashboard') {
+              setScreen('dashboard'); setSidebar(null); setSheet(false)
+            } else if (id === 'tasks') {
+              setScreen('dashboard'); setSidebar('assign'); setSheet(false)
+            } else if (id === 'projects') {
+              setSheet(true); setSidebar(null)
+            }
           }}
         />
       </div>
