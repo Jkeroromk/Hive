@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Agent } from '@/types'
-import { DECISIONS, ACTION_ITEMS, tx } from '@/lib/hive-data'
+import { tx } from '@/lib/hive-data'
 import { useHiveStore, HiveMeetingMessage } from '@/lib/hive-store'
 import { useT } from '@/lib/i18n'
 import AgentCard from './AgentCard'
@@ -327,7 +327,7 @@ export default function MeetingRoomView({
   const startRef = useRef(Date.now())
   const hasStarted = useRef(false)
 
-  const { addMeetingMessage, appendToLastMeetingMessage, endCurrentMeeting } =
+  const { addMeetingMessage, appendToLastMeetingMessage, endCurrentMeeting, workspace, addTokenUsage } =
     useHiveStore()
 
   const attendees = participantIds
@@ -372,6 +372,7 @@ export default function MeetingRoomView({
               kind: m.kind,
               text: m.text,
             })),
+            workspace: workspace ?? undefined,
           }),
         })
 
@@ -421,6 +422,8 @@ export default function MeetingRoomView({
                   return msgs
                 })
                 appendToLastMeetingMessage(meetingId, data.text)
+              } else if (eventType === 'usage') {
+                addTokenUsage(data.promptTokens ?? 0, data.completionTokens ?? 0)
               } else if (eventType === 'agent-done') {
                 setStreamingAgentId(null)
               } else if (eventType === 'meeting-done') {
@@ -685,21 +688,77 @@ export default function MeetingRoomView({
                 · {t('meet.decisionsHint')}
               </span>
             </Label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {DECISIONS.map((d, i) => (
-                <DecisionCard key={i}>{tx(d, lang)}</DecisionCard>
-              ))}
-            </div>
+            {messages.length === 0 ? (
+              <div style={{ fontSize: 12, color: 'var(--text-mute)', fontStyle: 'italic' }}>
+                {t('meet.decisionsEmpty')}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {messages
+                  .filter(m => m.kind === 'agent' && (
+                    m.text.toLowerCase().includes('propose') ||
+                    m.text.toLowerCase().includes('decision') ||
+                    m.text.toLowerCase().includes('agree') ||
+                    m.text.toLowerCase().includes('决定') ||
+                    m.text.toLowerCase().includes('提议') ||
+                    m.text.toLowerCase().includes('建议')
+                  ))
+                  .slice(-3)
+                  .map((m, i) => (
+                    <DecisionCard key={i}>
+                      {m.text.slice(0, 140)}{m.text.length > 140 ? '…' : ''}
+                    </DecisionCard>
+                  ))}
+                {messages.filter(m => m.kind === 'agent' && (
+                  m.text.toLowerCase().includes('propose') ||
+                  m.text.toLowerCase().includes('decision') ||
+                  m.text.toLowerCase().includes('agree') ||
+                  m.text.toLowerCase().includes('决定') ||
+                  m.text.toLowerCase().includes('提议') ||
+                  m.text.toLowerCase().includes('建议')
+                )).length === 0 && (
+                  <div style={{ fontSize: 12, color: 'var(--text-mute)', fontStyle: 'italic' }}>
+                    {t('meet.decisionsEmpty')}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <div>
             <Label>{t('meet.actions')}</Label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {ACTION_ITEMS.map((it, i) => (
-                <ActionItem key={i} who={it.who}>
-                  {tx(it.text, lang)}
-                </ActionItem>
-              ))}
-            </div>
+            {messages.length === 0 ? (
+              <div style={{ fontSize: 12, color: 'var(--text-mute)', fontStyle: 'italic' }}>
+                {t('meet.actionsEmpty')}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {messages
+                  .filter(m => m.kind === 'agent' && (
+                    m.text.toLowerCase().includes('will ') ||
+                    m.text.toLowerCase().includes("i'll") ||
+                    m.text.toLowerCase().includes('action') ||
+                    m.text.toLowerCase().includes('负责') ||
+                    m.text.toLowerCase().includes('我来')
+                  ))
+                  .slice(-3)
+                  .map((m, i) => (
+                    <ActionItem key={i} who={m.from}>
+                      {m.text.slice(0, 100)}{m.text.length > 100 ? '…' : ''}
+                    </ActionItem>
+                  ))}
+                {messages.filter(m => m.kind === 'agent' && (
+                  m.text.toLowerCase().includes('will ') ||
+                  m.text.toLowerCase().includes("i'll") ||
+                  m.text.toLowerCase().includes('action') ||
+                  m.text.toLowerCase().includes('负责') ||
+                  m.text.toLowerCase().includes('我来')
+                )).length === 0 && (
+                  <div style={{ fontSize: 12, color: 'var(--text-mute)', fontStyle: 'italic' }}>
+                    {t('meet.actionsEmpty')}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

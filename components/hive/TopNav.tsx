@@ -1,6 +1,6 @@
 'use client'
+import { UserButton } from '@clerk/nextjs'
 import { useT } from '@/lib/i18n'
-import Icon from './Icon'
 
 function HiveLogo({ size = 24 }: { size?: number }) {
   return (
@@ -18,73 +18,39 @@ function HiveLogo({ size = 24 }: { size?: number }) {
   )
 }
 
-function ThemeToggle({ theme, onTheme }: { theme: string; onTheme: (t: string) => void }) {
-  const isDark = theme === 'dark'
+function SettingsIcon({ size = 14 }: { size?: number }) {
   return (
-    <button
-      onClick={() => onTheme(isDark ? 'light' : 'dark')}
-      aria-label="Toggle theme"
-      style={{
-        appearance: 'none', border: '.5px solid var(--line)',
-        background: 'var(--surface)', color: 'var(--text-dim)',
-        width: 32, height: 32, borderRadius: 8, cursor: 'pointer',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        transition: 'all .2s',
-      }}
-    >
-      <Icon name={isDark ? 'sun' : 'moon'} size={14} />
-    </button>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
   )
 }
 
-function LangToggle({ lang, onLang }: { lang: string; onLang: (l: string) => void }) {
-  return (
-    <div style={{
-      display: 'flex', padding: 2, borderRadius: 8,
-      background: 'var(--surface-2)', border: '.5px solid var(--line)',
-    }}>
-      {['en', 'zh'].map(l => (
-        <button key={l} onClick={() => onLang(l)} style={{
-          appearance: 'none', border: 0, borderRadius: 6,
-          background: lang === l ? 'var(--surface)' : 'transparent',
-          color: lang === l ? 'var(--text)' : 'var(--text-mute)',
-          fontFamily: l === 'zh' ? "'Noto Sans SC',sans-serif" : 'inherit',
-          fontSize: 11, fontWeight: 600, letterSpacing: '.02em',
-          padding: '3px 9px', cursor: 'pointer',
-          boxShadow: lang === l ? '0 1px 2px rgba(0,0,0,.06)' : 'none',
-          transition: 'all .15s',
-        }}>
-          {l === 'en' ? 'EN' : '中'}
-        </button>
-      ))}
-    </div>
-  )
-}
 
 interface TopNavProps {
   workingCount: number
   current: string
   onNav: (id: string) => void
-  theme: string
-  onTheme: (t: string) => void
-  lang: string
-  onLang: (l: string) => void
+  onSetup: () => void
+  hasWorkspace: boolean
 }
 
-export default function TopNav({ workingCount, current, onNav, theme, onTheme, lang, onLang }: TopNavProps) {
+export default function TopNav({ workingCount, current, onNav, onSetup, hasWorkspace }: TopNavProps) {
   const { t } = useT()
 
   const navItems = [
     { id: 'dashboard', label: t('nav.dashboard') },
     { id: 'meetings',  label: t('nav.meetings') },
     { id: 'tasks',     label: t('nav.tasks') },
-    { id: 'activity',  label: t('nav.activity') },
+    { id: 'projects',  label: t('nav.projects') },
   ]
 
   return (
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '18px 32px', borderBottom: '.5px solid var(--line-soft)',
+      padding: '14px 20px', borderBottom: '.5px solid var(--line-soft)',
       background: 'var(--backdrop)', backdropFilter: 'blur(20px)',
       position: 'relative', zIndex: 10, flexShrink: 0,
     }}>
@@ -110,8 +76,8 @@ export default function TopNav({ workingCount, current, onNav, theme, onTheme, l
         </div>
       </div>
 
-      {/* Center: tab nav */}
-      <div style={{ display: 'flex', gap: 2 }}>
+      {/* Center: tab nav — hidden on mobile via .topnav-center */}
+      <div className="topnav-center" style={{ display: 'flex', gap: 2 }}>
         {navItems.map(item => (
           <button key={item.id} onClick={() => onNav(item.id)} style={{
             appearance: 'none', border: 0, background: 'transparent',
@@ -131,17 +97,31 @@ export default function TopNav({ workingCount, current, onNav, theme, onTheme, l
         ))}
       </div>
 
-      {/* Right: theme, lang, avatar */}
+      {/* Right: setup, theme, lang, avatar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <LangToggle lang={lang} onLang={onLang} />
-        <ThemeToggle theme={theme} onTheme={onTheme} />
+        <button
+          onClick={onSetup}
+          title="设置"
+          style={{
+            appearance: 'none', border: `.5px solid ${hasWorkspace ? 'var(--line)' : 'var(--amber)'}`,
+            background: hasWorkspace ? 'var(--surface)' : 'var(--amber-tint)',
+            color: hasWorkspace ? 'var(--text-dim)' : 'var(--amber)',
+            width: 32, height: 32, borderRadius: 8, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'all .2s', position: 'relative',
+          }}
+        >
+          <SettingsIcon size={14} />
+          {!hasWorkspace && (
+            <span style={{
+              position: 'absolute', top: -3, right: -3,
+              width: 7, height: 7, borderRadius: '50%',
+              background: 'var(--amber)', border: '1.5px solid var(--bg)',
+            }} />
+          )}
+        </button>
         <div style={{ width: 1, height: 16, background: 'var(--line)', margin: '0 6px' }} />
-        <div style={{
-          width: 32, height: 32, borderRadius: '50%',
-          background: 'linear-gradient(135deg, var(--amber), var(--amber-deep))',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontWeight: 600, fontSize: 12, color: 'var(--bg)',
-        }}>SC</div>
+        <UserButton />
       </div>
     </div>
   )

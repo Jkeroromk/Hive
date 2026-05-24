@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { uploadPath } from '@/lib/storage'
 import fs from 'fs'
 import path from 'path'
@@ -8,8 +8,8 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { name: string } }
 ) {
-  const session = await auth()
-  if (!session?.user) return new NextResponse('Unauthorized', { status: 401 })
+  const { userId } = await auth()
+  if (!userId) return new NextResponse('Unauthorized', { status: 401 })
 
   // Prevent path traversal
   const name = path.basename(params.name)
