@@ -35,16 +35,6 @@ Hive 是一个为创始人和 CEO 打造的 AI 多智能体工作平台。13 名
 
 ---
 
-## 部署
-
-推荐一键部署到 Vercel：
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Jkeroromk/Hive)
-
-部署时在 Vercel 环境变量面板填入上述所有 env 变量即可。
-
----
-
 ## 免费额度参考
 
 | 服务 | 免费额度 |
