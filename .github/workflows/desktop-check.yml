@@ -41,3 +41,43 @@ jobs:
         run: |
           msg=$(grep -E "(error|warning)(\[|:)" clippy.txt | head -60 | tr -d '\r' | sed -e 's/%/%25/g' | awk 'BEGIN{ORS="%0A"}{print}')
           echo "::error title=cargo clippy::${msg}"
+
+  # Unsigned installer for trying a branch out — download it from the run's Artifacts.
+  # No auto-update in this build; real releases come from desktop-release.yml.
+  preview-installer:
+    needs: check
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri -> target
+
+      - name: Build installer
+        working-directory: desktop
+        shell: bash
+        run: |
+          npm install
+          set -o pipefail
+          npx tauri build --config '{"bundle":{"createUpdaterArtifacts":false}}' 2>&1 | tee build.txt
+
+      - name: Report errors
+        if: failure()
+        working-directory: desktop
+        shell: bash
+        run: |
+          msg=$(grep -iE "error|failed" build.txt | head -40 | tr -d '\r' | sed -e 's/%/%25/g' | awk 'BEGIN{ORS="%0A"}{print}')
+          echo "::error title=tauri build::${msg}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Hive-preview-installer
+          path: desktop/src-tauri/target/release/bundle/nsis/*.exe
+          if-no-files-found: error
