@@ -9,6 +9,9 @@ on:
     paths: ['desktop/**', '.github/workflows/desktop-*.yml']
   workflow_dispatch:
 
+env:
+  CARGO_TERM_COLOR: never
+
 jobs:
   check:
     runs-on: windows-latest
