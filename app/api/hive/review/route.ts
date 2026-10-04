@@ -9,6 +9,9 @@ import { disputedIssueIds, parseAuthorReply, parseReview } from '@/lib/llm/revie
 import type { WorkspaceContext } from '@/lib/hive-store'
 
 // Cross-model review: reviewer critiques → author responds → disagreements go to the user.
+// Several agents speak in turn; allow up to 5 minutes on Vercel.
+export const maxDuration = 300
+
 export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return new Response('Unauthorized', { status: 401 })

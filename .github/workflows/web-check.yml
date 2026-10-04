@@ -1,0 +1,50 @@
+# Make sure the web app builds (types + Next.js build) before it reaches Vercel.
+name: web-check
+
+on:
+  pull_request:
+    paths-ignore: ['desktop/**', '**.md']
+  push:
+    branches: [master]
+    paths-ignore: ['desktop/**', '**.md']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # Placeholders: the build needs these to exist, never to be real
+      DATABASE_URL: postgresql://user:pass@localhost:5432/hive
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ZXhhbXBsZS5jbGVyay5hY2NvdW50cy5kZXYk
+      CLERK_SECRET_KEY: sk_test_placeholder
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: |
+          set -o pipefail
+          npm ci 2>&1 | tee install.txt
+
+      - name: Next build
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee build.txt
+
+      # Runs even if the build failed, to list every type error (next build stops at the first)
+      - name: Type check
+        if: always()
+        run: |
+          set -o pipefail
+          npx tsc --noEmit 2>&1 | tee tsc.txt
+
+      # Put errors on the run page as an annotation (readable without opening raw logs)
+      - name: Report errors
+        if: failure()
+        run: |
+          msg=$( (grep -hiE "error|failed|ERR" install.txt tsc.txt build.txt 2>/dev/null || true) | head -60 | sed -e 's/%/%25/g' | awk 'BEGIN{ORS="%0A"}{print}')
+          echo "::error title=web build::${msg}"
