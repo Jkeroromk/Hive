@@ -25,7 +25,10 @@ jobs:
           node-version: 22
           cache: npm
 
-      - run: npm ci
+      - name: Install
+        run: |
+          set -o pipefail
+          npm ci 2>&1 | tee install.txt
 
       - name: Next build
         run: |
@@ -43,5 +46,5 @@ jobs:
       - name: Report errors
         if: failure()
         run: |
-          msg=$( (grep -hE "error|Error|Failed" tsc.txt build.txt 2>/dev/null || true) | head -60 | sed -e 's/%/%25/g' | awk 'BEGIN{ORS="%0A"}{print}')
+          msg=$( (grep -hiE "error|failed|ERR" install.txt tsc.txt build.txt 2>/dev/null || true) | head -60 | sed -e 's/%/%25/g' | awk 'BEGIN{ORS="%0A"}{print}')
           echo "::error title=web build::${msg}"
