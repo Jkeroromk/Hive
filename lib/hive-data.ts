@@ -1,4 +1,5 @@
 import { Agent, I18nField, Status } from '@/types'
+import { MODELS } from '@/lib/models'
 
 export function tx(obj: I18nField | string | null | undefined, lang: string): string {
   if (!obj) return ''
@@ -20,6 +21,9 @@ export function sv(status: Status, kind: 'dotVar' | 'textVar' | 'glowVar'): stri
   return v ? `var(${v})` : 'transparent'
 }
 
+// Every agent runs on HIVE_DEFAULT_MODEL unless it pins `model` here
+// (or is overridden at runtime with HIVE_MODEL_<ID>, e.g. HIVE_MODEL_DEV_TARO=openai:gpt-5).
+// To add a new model as a teammate: add an entry below + a prompt in lib/agent-prompts.ts.
 export const AGENTS: Agent[] = [
   { id:'pm-ming',  name:'Ming',   emoji:'🧭', roleKey:'role.pm',
     specialty:{ en:'Roadmap, specs, prioritisation. Translates fuzzy ideas into shippable scope.',
@@ -73,5 +77,13 @@ export const AGENTS: Agent[] = [
     specialty:{ en:'Budgeting, runway, board pack prep.',
                 zh:'预算、现金流、董事会材料。' },
     status:'idle', task:null, tasks:0, avgMs:0, joinedDays:0, tilt:1.4 },
+  { id:'rv-muse',  name:'Muse',   emoji:'◈',  roleKey:'role.reviewer',
+    specialty:{ en:'Cross-model reviewer on Meta Muse Spark. Stress-tests the team\'s work for blind spots.',
+                zh:'跨模型审查员，运行在 Meta Muse Spark 上。专挑团队产出里的盲点。' },
+    status:'idle', task:null, tasks:0, avgMs:0, joinedDays:0, tilt:-1.5,
+    model: MODELS.museSpark },
 ]
+
+/** The agent that reviews other agents' task output. */
+export const REVIEWER_ID = 'rv-muse'
 

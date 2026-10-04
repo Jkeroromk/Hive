@@ -1,12 +1,14 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Agent, Status } from '@/types'
-import { tx, sv } from '@/lib/hive-data'
+import { tx, sv, REVIEWER_ID } from '@/lib/hive-data'
 import { useHiveStore, TaskRecord, WorkspaceContext } from '@/lib/hive-store'
 import { useT } from '@/lib/i18n'
 import Icon from './Icon'
 import AgentCard from './AgentCard'
 import { PrimaryBtn, Label } from './Buttons'
+import ModelBadge from './ModelBadge'
+import ReviewPanel from './ReviewPanel'
 
 // ─── File Upload helpers ──────────────────────────────────────────────────────
 
@@ -232,8 +234,9 @@ function AgentPicker({
               <div className="mono" style={{ fontSize: 12, fontWeight: 600 }}>
                 {a.name}
               </div>
-              <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>
+              <div style={{ fontSize: 11, color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: 6 }}>
                 {t(a.roleKey)}
+                <ModelBadge agentId={a.id} />
               </div>
             </div>
             <span
@@ -303,6 +306,8 @@ function AssignTaskPanel({
   const [isStreaming, setIsStreaming] = useState(false)
   const [output, setOutput] = useState('')
   const [streamError, setStreamError] = useState('')
+  // The task + output that just finished, so it can be sent for cross-model review
+  const [finished, setFinished] = useState<{ id: string; task: string; output: string } | null>(null)
   const [uploads, setUploads] = useState<UploadedFile[]>([])
   const [uploading, setUploading] = useState(false)
   const outputRef = useRef<HTMLDivElement>(null)
@@ -316,6 +321,7 @@ function AssignTaskPanel({
     setStreamError('')
     setText('')
     setUploads([])
+    setFinished(null)
   }, [agent?.id])
 
   const handleFiles = useCallback(async (files: FileList) => {
@@ -343,6 +349,7 @@ function AssignTaskPanel({
   }, [output])
 
   const prompts = getAgentPrompts(agent?.id ?? '', lang)
+  const reviewer = agents.find((a) => a.id === REVIEWER_ID)
 
   const handleAssign = async () => {
     if (!agent || !text.trim() || isStreaming) return
@@ -350,6 +357,7 @@ function AssignTaskPanel({
     setIsStreaming(true)
     setOutput('')
     setStreamError('')
+    setFinished(null)
     onAgentStatusChange?.(agent.id, 'thinking')
 
     try {
@@ -402,12 +410,13 @@ function AssignTaskPanel({
                 timestamp: Date.now(),
               }
               addTaskRecord(record)
+              setFinished({ id: record.id, task: text, output: record.output })
               setUploads([])
               onAgentStatusChange?.(agent.id, 'done')
             } else if (eventType === 'usage') {
               addTokenUsage(data.promptTokens ?? 0, data.completionTokens ?? 0)
             } else if (eventType === 'error') {
-              setStreamError(data.message ?? 'Something went wrong. Check your GROQ_API_KEY in .env.local')
+              setStreamError(data.message ?? 'Something went wrong — check the API keys in .env.local')
               onAgentStatusChange?.(agent.id, 'idle')
             }
           } catch {}
@@ -456,8 +465,9 @@ function AssignTaskPanel({
           >
             {agent.name}
           </div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>
+          <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             {role}
+            <ModelBadge agentId={agent.id} showModel />
           </div>
           <div
             style={{
@@ -745,6 +755,17 @@ function AssignTaskPanel({
             )}
           </div>
         </div>
+      )}
+
+      {/* Cross-model review (any agent except the reviewer itself) */}
+      {finished && !isStreaming && reviewer && agent.id !== reviewer.id && (
+        <ReviewPanel
+          key={finished.id}
+          author={agent}
+          reviewer={reviewer}
+          task={finished.task}
+          output={finished.output}
+        />
       )}
     </div>
   )

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Agent } from '@/types'
 import { sv, tx } from '@/lib/hive-data'
 import { useT } from '@/lib/i18n'
+import ModelBadge from './ModelBadge'
 
 // ─── AgentRow ────────────────────────────────────────────────────────────────
 
@@ -134,6 +135,7 @@ function AgentRow({
           }}>
             {t(agent.roleKey)}
           </span>
+          {!narrow && <span style={{ flexShrink: 0, marginLeft: 'auto' }}><ModelBadge agentId={agent.id} /></span>}
         </div>
 
         {/* Status dot + specialty */}
