@@ -1,0 +1,28 @@
+# Compile-check the desktop shell on Windows whenever it changes.
+name: desktop-check
+
+on:
+  pull_request:
+    paths: ['desktop/**', '.github/workflows/desktop-*.yml']
+  push:
+    branches: [master]
+    paths: ['desktop/**', '.github/workflows/desktop-*.yml']
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri -> target
+
+      - name: cargo clippy
+        working-directory: desktop/src-tauri
+        run: cargo clippy --all-targets -- -D warnings
