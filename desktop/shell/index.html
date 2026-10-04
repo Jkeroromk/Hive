@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hive</title>
+<style>
+  /* Same tokens as Hive's dark theme (app/globals.css), its default */
+  :root {
+    --bg: #0B0A07; --surface: #14120E; --surface-2: #1C1A15; --line: #25221C;
+    --text: #F4EFE6; --text-dim: #A39A8C; --text-mute: #6B6358;
+    --amber: #F59E0B; --amber-tint: rgba(245,158,11,.10); --red: #F87171;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: "Segoe UI Variable", "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    display: grid; place-items: center; padding: 24px;
+    background-image:
+      radial-gradient(circle at 50% 38%, var(--amber-tint), transparent 55%);
+    user-select: none;
+  }
+  .card {
+    width: 100%; max-width: 420px; background: var(--surface);
+    border: .5px solid var(--line); border-radius: 18px; padding: 32px 28px 28px;
+    box-shadow: 0 24px 60px rgba(0,0,0,.35);
+  }
+  .logo { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+  .logo svg { width: 34px; height: 34px; color: var(--amber); }
+  .logo b { font-size: 20px; letter-spacing: -.02em; }
+  .logo span { display: block; font-size: 12px; color: var(--text-mute); font-weight: 400; margin-top: 2px; }
+  h1 { font-size: 15px; margin: 0 0 6px; font-weight: 600; }
+  p { font-size: 13px; line-height: 1.6; color: var(--text-dim); margin: 0 0 18px; }
+  label { display: block; font-size: 12px; color: var(--text-mute); margin-bottom: 6px; }
+  input {
+    width: 100%; font: inherit; font-size: 14px; color: var(--text); user-select: text;
+    background: var(--bg); border: .5px solid var(--line); border-radius: 10px; padding: 11px 12px; outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input:focus { border-color: var(--amber); box-shadow: 0 0 0 4px var(--amber-tint); }
+  .hint { font-size: 11.5px; color: var(--text-mute); margin-top: 8px; line-height: 1.5; }
+  .row { display: flex; gap: 8px; margin-top: 20px; }
+  button {
+    flex: 1; font: inherit; font-size: 13.5px; font-weight: 600; border-radius: 10px; padding: 11px 14px; cursor: pointer;
+    border: .5px solid var(--line); background: var(--surface-2); color: var(--text); transition: filter .15s;
+  }
+  button.primary { background: var(--amber); border-color: var(--amber); color: #1a1408; }
+  button:hover { filter: brightness(1.08); }
+  button:disabled { opacity: .5; cursor: default; filter: none; }
+  .err { color: var(--red); font-size: 12.5px; margin-top: 10px; min-height: 18px; line-height: 1.5; }
+  .center { text-align: center; }
+  .spinner { width: 28px; height: 28px; margin: 6px auto 16px; color: var(--amber); animation: spin 1.4s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .url { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 12px; color: var(--text-mute); word-break: break-all; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+  <main class="card">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true">
+        <polygon points="12,2 21,7 21,17 12,22 3,17 3,7" />
+        <polygon points="12,7.5 16,9.75 16,14.25 12,16.5 8,14.25 8,9.75" fill="currentColor" stroke="none" opacity=".85" />
+      </svg>
+      <div><b>Hive</b><span>你的 AI 团队，始终在线</span></div>
+    </div>
+
+    <!-- Connecting -->
+    <section id="connecting" class="center" hidden>
+      <svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M12 3a9 9 0 1 0 9 9" />
+      </svg>
+      <h1>正在连接蜂巢…</h1>
+      <div class="url" id="connecting-url"></div>
+    </section>
+
+    <!-- Offline / unreachable -->
+    <section id="offline" hidden>
+      <h1>连不上 Hive 服务器</h1>
+      <p>检查一下网络，或者服务器是不是在运行。本地开发时记得先在 Hive 目录里跑 <code>npm run dev</code>。</p>
+      <div class="url" id="offline-url"></div>
+      <div class="row">
+        <button id="change">更改地址</button>
+        <button class="primary" id="retry">重试</button>
+      </div>
+    </section>
+
+    <!-- First run / change server -->
+    <section id="setup" hidden>
+      <h1>连接到你的 Hive</h1>
+      <p>填入 Hive 网页版的地址。桌面端只是一个窗口，模型和 API Key 都留在服务器上。</p>
+      <form id="setup-form" novalidate>
+        <label for="url">服务器地址</label>
+        <input id="url" type="url" inputmode="url" spellcheck="false" autocomplete="off"
+               placeholder="https://hive-xxx.vercel.app" />
+        <div class="hint">本地开发填 <span class="url">http://localhost:3000</span></div>
+        <div class="err" id="setup-err"></div>
+        <div class="row">
+          <button type="button" id="cancel" hidden>取消</button>
+          <button type="submit" class="primary" id="save">连接</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+<script>
+(() => {
+  const KEY = 'hive.serverUrl'
+  const $ = (id) => document.getElementById(id)
+  const show = (id) => ['connecting', 'offline', 'setup'].forEach((s) => ($(s).hidden = s !== id))
+
+  const load = () => { try { return localStorage.getItem(KEY) || '' } catch { return '' } }
+  const save = (u) => { try { localStorage.setItem(KEY, u) } catch {} }
+
+  // Plain http is only allowed for this machine and private networks.
+  const isLocalHost = (h) =>
+    h === 'localhost' || h === '127.0.0.1' || h === '[::1]' || h.endsWith('.local') ||
+    /^10\./.test(h) || /^192\.168\./.test(h) || /^172\.(1[6-9]|2\d|3[01])\./.test(h)
+
+  function normalize(raw) {
+    let s = (raw || '').trim()
+    if (!s) throw new Error('请填写服务器地址')
+    if (!/^https?:\/\//i.test(s)) s = (/^(localhost|127\.|192\.168\.|10\.)/.test(s) ? 'http://' : 'https://') + s
+    let u
+    try { u = new URL(s) } catch { throw new Error('地址格式不对') }
+    if (u.protocol === 'http:' && !isLocalHost(u.hostname))
+      throw new Error('公网地址必须用 https://，不然登录信息会明文传输')
+    return u.origin
+  }
+
+  // Any HTTP response (even 401/404) means the server is up; only network failures reject.
+  async function reachable(url) {
+    try {
+      await fetch(url, { mode: 'no-cors', cache: 'no-store', signal: AbortSignal.timeout(8000) })
+      return true
+    } catch { return false }
+  }
+
+  async function connect(url) {
+    show('connecting')
+    $('connecting-url').textContent = url
+    if (await reachable(url)) {
+      location.replace(url)
+    } else {
+      $('offline-url').textContent = url
+      show('offline')
+    }
+  }
+
+  function openSetup(canCancel) {
+    $('url').value = load()
+    $('setup-err').textContent = ''
+    $('cancel').hidden = !canCancel
+    show('setup')
+    setTimeout(() => $('url').focus(), 0)
+  }
+
+  $('setup-form').addEventListener('submit', async (e) => {
+    e.preventDefault()
+    let url
+    try { url = normalize($('url').value) } catch (err) { $('setup-err').textContent = err.message; return }
+    $('save').disabled = true
+    $('setup-err').textContent = ''
+    if (await reachable(url)) {
+      save(url)
+      location.replace(url)
+    } else {
+      $('setup-err').textContent = '连不上这个地址，确认服务器在运行后再试'
+      $('save').disabled = false
+    }
+  })
+  $('retry').addEventListener('click', () => connect(load()))
+  $('change').addEventListener('click', () => openSetup(true))
+  $('cancel').addEventListener('click', () => connect(load()))
+
+  const saved = load()
+  const wantsSetup = new URLSearchParams(location.search).has('setup')
+  if (!saved || wantsSetup) openSetup(Boolean(saved))
+  else connect(saved)
+})()
+</script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+# Build, sign and publish the Windows installer + updater manifest.
+# Release a new version:  bump "version" in desktop/package.json, commit,
+# then push a tag like  git tag desktop-v0.2.0 && git push origin desktop-v0.2.0
+# Installed apps pick it up via releases/latest/download/latest.json.
+name: desktop-release
+
+on:
+  push:
+    tags: ['desktop-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri -> target
+
+      - name: Install Tauri CLI
+        working-directory: desktop
+        run: npm install
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          projectPath: desktop
+          tagName: desktop-v__VERSION__
+          releaseName: Hive Desktop v__VERSION__
+          releaseBody: Windows 安装包。已安装的 Hive 会自动提示更新。
+          releaseDraft: false
+          prerelease: false
+          includeUpdaterJson: true

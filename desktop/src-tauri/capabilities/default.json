@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "The local start page needs no native APIs. The remote Hive site gets no IPC access at all.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}
