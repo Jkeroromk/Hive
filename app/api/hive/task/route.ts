@@ -9,6 +9,9 @@ import { streamChat, type ChatTurn } from '@/lib/llm/stream'
 import { sseResponse } from '@/lib/llm/sse'
 import type { WorkspaceContext } from '@/lib/hive-store'
 
+// Long answers stream for a while; allow up to 5 minutes on Vercel.
+export const maxDuration = 300
+
 export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return new Response('Unauthorized', { status: 401 })
@@ -39,7 +42,7 @@ export async function POST(req: NextRequest) {
   let fullTask = task
   if (uploadIds?.length) {
     const uploads = await db.upload.findMany({
-      where: { id: { in: uploadIds } },
+      where: { id: { in: uploadIds }, OR: [{ userId }, { userId: null }] },
       select: { id: true, originalName: true, mimeType: true, extractedText: true },
     })
     for (const upload of uploads) {

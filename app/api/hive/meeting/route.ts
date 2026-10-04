@@ -16,6 +16,9 @@ interface HistoryMsg {
 
 const nameOf = (id: string) => AGENTS.find((a) => a.id === id)?.name ?? id
 
+// Several agents speak in turn; allow up to 5 minutes on Vercel.
+export const maxDuration = 300
+
 export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return new Response('Unauthorized', { status: 401 })

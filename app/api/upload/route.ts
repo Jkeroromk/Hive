@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db'
-import { saveFile, fileUrl } from '@/lib/storage'
+import { saveFile, fileUrl, storeInDb, MAX_UPLOAD_BYTES } from '@/lib/storage'
 import { extractText } from '@/lib/file-extract'
-
-const MAX_SIZE = 50 * 1024 * 1024 // 50 MB
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth()
@@ -15,15 +13,16 @@ export async function POST(req: NextRequest) {
   const projectId = formData.get('projectId') as string | null
 
   if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
-  if (file.size > MAX_SIZE) {
-    return NextResponse.json({ error: 'File too large (max 50 MB)' }, { status: 413 })
+  if (file.size > MAX_UPLOAD_BYTES) {
+    const mb = MAX_UPLOAD_BYTES / 1024 / 1024
+    return NextResponse.json({ error: `File too large (max ${mb} MB)` }, { status: 413 })
   }
 
   const buffer = Buffer.from(await file.arrayBuffer())
   const ext = file.name.slice(file.name.lastIndexOf('.'))
   const storedName = `${crypto.randomUUID()}${ext}`
 
-  await saveFile(buffer, storedName)
+  if (!storeInDb) await saveFile(buffer, storedName)
 
   const extractedText = await extractText(buffer, file.type, file.name)
 
@@ -35,6 +34,8 @@ export async function POST(req: NextRequest) {
       size: file.size,
       storageUrl: fileUrl(storedName),
       extractedText,
+      userId,
+      ...(storeInDb ? { data: buffer } : {}),
       ...(projectId ? { projectId } : {}),
     },
     select: {

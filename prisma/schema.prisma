@@ -87,6 +87,10 @@ model Upload {
   size          Int
   storageUrl    String
   extractedText String?  @db.Text
+  /// File bytes, when stored in the database (on Vercel — see lib/storage.ts)
+  data          Bytes?
+  /// Clerk user ID of the uploader (null for uploads made before this field existed)
+  userId        String?
   createdAt     DateTime @default(now())
 
   projectId String?
