@@ -13,7 +13,7 @@ jobs:
   check:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -25,4 +25,16 @@ jobs:
 
       - name: cargo clippy
         working-directory: desktop/src-tauri
-        run: cargo clippy --all-targets -- -D warnings
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo clippy --all-targets --message-format=short -- -D warnings 2>&1 | tee clippy.txt
+
+      # Put compiler errors on the run page as an annotation (readable without opening raw logs)
+      - name: Report errors
+        if: failure()
+        working-directory: desktop/src-tauri
+        shell: bash
+        run: |
+          msg=$(grep -E "(error|warning)(\[|:)" clippy.txt | head -60 | tr -d '\r' | sed -e 's/%/%25/g' | awk 'BEGIN{ORS="%0A"}{print}')
+          echo "::error title=cargo clippy::${msg}"
