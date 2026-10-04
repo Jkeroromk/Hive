@@ -6,6 +6,14 @@ export interface I18nField {
   zh: string
 }
 
+/** Which LLM backend an agent runs on. See lib/models.ts for the registry. */
+export type ProviderId = 'anthropic' | 'meta' | 'groq' | 'openrouter' | 'openai'
+
+export interface ModelRef {
+  provider: ProviderId
+  model: string
+}
+
 export interface Agent {
   id: string
   name: string
@@ -18,68 +26,37 @@ export interface Agent {
   avgMs: number
   joinedDays: number
   tilt: number
+  /** Pin this agent to a specific model. Omit to use HIVE_DEFAULT_MODEL. */
+  model?: ModelRef
 }
 
-export interface Message {
-  from: string
-  kind: 'agent' | 'user'
-  t: string
-  text: I18nField | string
-  streaming?: boolean
+// ─── Cross-model review ──────────────────────────────────────────────────────
+
+export type ReviewSeverity = 'high' | 'medium' | 'low'
+export type ReviewVerdict = 'ship' | 'revise' | 'rethink'
+
+export interface ReviewIssue {
+  id: string // R1, R2, …
+  severity: ReviewSeverity
+  category: 'correctness' | 'logic' | 'risk' | 'missing' | 'clarity'
+  point: string
+  suggestion: string
 }
 
-export interface ActivityEntry {
-  t: string
-  who: string
-  verb: I18nField
-  detail: I18nField
-  tone: Status
+export interface Review {
+  verdict: ReviewVerdict
+  summary: string
+  issues: ReviewIssue[]
 }
 
-export interface DecisionEntry {
-  en: string
-  zh: string
+export interface ReviewResponse {
+  id: string // matches ReviewIssue.id
+  decision: 'accept' | 'reject' | 'partial'
+  reason: string
 }
 
-export interface ActionItemEntry {
-  who: string
-  text: I18nField
-}
-
-export interface MeetingData {
-  topic: I18nField
-  startedAt: string
-  attendees: string[]
-  messages: Message[]
-}
-
-// Legacy types for existing API routes
-export type AgentStatus = Status | 'error'
-
-export interface Task {
-  id: string
-  input: string
-  assignedTo: string[]
-  status: 'pending' | 'running' | 'done'
-  createdAt: Date
-}
-
-export interface MeetingMessage {
-  id: string
-  agentId: string
-  agentName: string
-  agentEmoji: string
-  content: string
-  timestamp: Date
-  isStreaming?: boolean
-}
-
-export interface LogEntry {
-  id: string
-  timestamp: Date
-  agentId: string
-  agentName: string
-  agentEmoji: string
-  message: string
-  type: 'task' | 'meeting' | 'system' | 'error'
+export interface AuthorReply {
+  responses: ReviewResponse[]
+  /** Full revised output, present only when the author accepted something material. */
+  revised?: string
 }

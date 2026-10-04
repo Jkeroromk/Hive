@@ -2,6 +2,8 @@
 import { useState } from 'react'
 import { useHiveStore, WorkspaceContext, TokenUsage } from '@/lib/hive-store'
 import Icon from './Icon'
+import { AGENTS } from '@/lib/hive-data'
+import { useAgentModels } from '@/lib/use-agent-models'
 
 // ─── Shared primitives ────────────────────────────────────────────────────────
 
@@ -149,36 +151,10 @@ function WorkspaceTab() {
 
 // ─── Usage tab ────────────────────────────────────────────────────────────────
 
-const GROQ_FREE_DAILY = 500_000  // Groq free tier: ~500k tokens/day (llama-3.3-70b)
-
 function fmt(n: number) {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(2) + 'M'
   if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K'
   return String(n)
-}
-
-function UsageBar({ label, used, total, color }: { label: string; used: number; total: number; color: string }) {
-  const pct = Math.min((used / total) * 100, 100)
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 12 }}>
-        <span style={{ color: 'var(--text-dim)' }}>{label}</span>
-        <span className="mono" style={{ color: 'var(--text)', fontSize: 11.5 }}>
-          {fmt(used)} / {fmt(total)}
-        </span>
-      </div>
-      <div style={{ height: 6, borderRadius: 99, background: 'var(--surface-3)', overflow: 'hidden' }}>
-        <div style={{
-          height: '100%', borderRadius: 99, width: `${pct}%`,
-          background: pct > 80 ? 'var(--red)' : pct > 50 ? 'var(--amber)' : color,
-          transition: 'width .4s ease',
-        }} />
-      </div>
-      <div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginTop: 4 }}>
-        {pct.toFixed(1)}% 已使用
-      </div>
-    </div>
-  )
 }
 
 function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
@@ -207,8 +183,6 @@ function UsageTab() {
     setConfirmed(false)
   }
 
-  const costEst = ((usage.totalTokens / 1_000_000) * 0.59).toFixed(4)  // Groq paid: ~$0.59/1M tokens
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div style={{
@@ -217,22 +191,15 @@ function UsageTab() {
         fontSize: 12, color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: 8,
       }}>
         <span style={{ fontSize: 14 }}>⚡</span>
-        当前使用 Groq 免费套餐 · 模型：llama-3.3-70b-versatile
+        多模型合计 · 每个 agent 用的模型见「偏好设置 → 模型」
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         <StatCard label="总 Token 用量" value={fmt(usage.totalTokens)} sub="本设备累计" />
-        <StatCard label="请求次数" value={String(usage.requestCount)} sub="任务 + 会议" />
-        <StatCard label="预估成本" value={`$${costEst}`} sub="按 Groq 付费价估算" />
+        <StatCard label="请求次数" value={String(usage.requestCount)} sub="任务 + 会议 + 审查" />
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <UsageBar
-          label="每日免费额度估算"
-          used={usage.totalTokens}
-          total={GROQ_FREE_DAILY}
-          color="var(--green)"
-        />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <div style={{ background: 'var(--surface-2)', border: '.5px solid var(--line)', borderRadius: 10, padding: '12px 14px' }}>
             <div style={{ fontSize: 10.5, color: 'var(--text-mute)', marginBottom: 4 }}>输入 Token</div>
@@ -317,31 +284,47 @@ function PreferencesTab({ theme, onTheme, lang, onLang }: {
         </div>
       </Field>
 
-      <Field label="Groq API Key" hint="存储在本地，不上传服务器">
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input
-            type="password"
-            defaultValue="gsk_••••••••••••••••"
-            readOnly
-            style={{ ...inputStyle, flex: 1, color: 'var(--text-mute)', cursor: 'not-allowed' }}
-          />
-          <a
-            href="https://console.groq.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '9px 14px', borderRadius: 9, textDecoration: 'none',
-              border: '.5px solid var(--line)', background: 'var(--surface-2)',
-              fontSize: 12, color: 'var(--text-dim)', whiteSpace: 'nowrap',
-              transition: 'all .15s',
-            }}
-          >
-            Groq 控制台 ↗
-          </a>
-        </div>
-      </Field>
+      <ModelsField />
     </div>
+  )
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+function ModelsField() {
+  const info = useAgentModels()
+  if (!info) return null
+  const usedBy = (provider: string) =>
+    AGENTS.filter((a) => info.agents[a.id]?.provider === provider).map((a) => a.name)
+
+  return (
+    <Field label="模型" hint="API Key 只放在服务器的 .env.local 里，不会发到浏览器">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {info.providers.map((p) => {
+          const names = usedBy(p.id)
+          return (
+            <div key={p.id} style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '9px 12px', borderRadius: 9,
+              border: '.5px solid var(--line)', background: 'var(--surface-2)',
+              opacity: p.configured || names.length ? 1 : 0.55,
+            }}>
+              <span style={{
+                width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+                background: p.configured ? 'var(--green)' : names.length ? 'var(--red)' : 'var(--text-mute)',
+              }} />
+              <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)', width: 84 }}>{p.label}</span>
+              <span style={{ fontSize: 11.5, color: 'var(--text-dim)', flex: 1, minWidth: 0 }}>
+                {names.length ? names.join('、') : '未使用'}
+              </span>
+              <span className="mono" style={{ fontSize: 10.5, color: p.configured ? 'var(--green)' : 'var(--text-mute)' }}>
+                {p.configured ? '已配置' : '未配置'}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </Field>
   )
 }
 
